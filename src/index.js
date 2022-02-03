@@ -96,7 +96,7 @@ class Script extends Output {
         this.followingCount.currentPage += data.user.edge_follow.edges.length;
 
         this.handleProgressOutput(this.followingCount.total, this.followingCount.currentPage);
-        await sleep(1500); // Waiting 1.5 seconds before requesting the next page
+        await sleep(2000); // Waiting 2 seconds before requesting the next page
       } while (this.canQuery);
 
       this.handleProcessFinishOutput(this.unfollowers, this.unfollowers.length);
