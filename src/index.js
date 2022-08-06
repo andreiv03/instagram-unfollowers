@@ -1,54 +1,64 @@
-class Output {
-  constructor() {
-    this.styles = `
-      padding: 0.5rem 0;
-      font-size: 1rem;
-      font-weight: 700;
-    `;
-  }
+const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
 
-  handleProgressOutput(total, currentPage) {
-    console.clear();
-    console.log(`%cProgress ${currentPage}/${total} (${parseInt(currentPage / total * 100)}%)`, this.styles);
-  }
+const styles = `
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+`;
 
-  async handleRateLimitOutput(count) {
-    if (!count || count % 5 !== 0) return;
-    console.clear();
-    console.warn("%cRATE LIMIT - Waiting 10 seconds before requesting again...", this.styles);
-    await sleep(10000);
-  }
+async function handleOutput(type, data) {
+  switch (type) {
+    case "progress": {
+      console.clear();
+      console.warn(`%cProgress ${data.currentPage}/${data.followingCount} (${parseInt(data.currentPage / data.followingCount * 100)}%)`, styles);
+      break;
+    }
+    
+    case "rateLimit": {
+      if (data.requestsCount === 0 || data.requestsCount % 5 !== 0) return;
 
-  handleProcessFinishOutput(unfollowers, length) {
-    console.clear();
-    if (!length) return console.log(`%cPROCESS FINISHED - Everyone followed you back! 😄`, this.styles);
+      console.clear();
+      console.warn("%cRATE LIMIT - Waiting 10 seconds before requesting again...", styles);
 
-    console.group(`%cPROCESS FINISHED - ${length} ${length === 1 ? "user" : "users"} didn't follow you back. 🤬`, this.styles);
-    unfollowers.forEach(unfollower => console.log(`${unfollower.username} ${unfollower.isVerified ? "☑️" : ""}`));
-    console.groupEnd();
+      await sleep(10000);
+      break;
+    }
+
+    case "finish": {
+      console.clear();
+    
+      if (data.unfollowers.length === 0)
+        return console.warn(`%cPROCESS FINISHED - Everyone followed you back! 😄`, styles);
+
+      console.group(`%cPROCESS FINISHED - ${data.unfollowers.length} ${data.unfollowers.length === 1 ? "user" : "users"} didn't follow you back. 🤬`, styles);
+      data.unfollowers.forEach(unfollower => console.log(`${unfollower.username}${unfollower.isVerified ? " ☑️" : ""} - https://www.instagram.com/${unfollower.username}/`));
+      console.groupEnd();
+    }
   }
 }
 
-class Script extends Output {
+class Script {
   constructor(checkVerifiedUsers) {
-    super();
     this.checkVerifiedUsers = checkVerifiedUsers;
     this.unfollowers = [];
     this.canQuery = false;
     this.nextPageHash = "";
     this.requestsCount = 0;
-    this.followingCount = { total: 0, currentPage: 0 };
+    this.followingCount = 0;
+    this.currentPage = 0;
   }
 
   getCookie(cookieName) {
     return new Promise((resolve, reject) => {
       const cookies = document.cookie.split(";");
+
       for (const cookie of cookies) {
         const pair = cookie.split("=");
         if (pair[0].trim() === cookieName)
           resolve(decodeURIComponent(pair[1]));
       }
-      reject("");
+
+      reject("Cookie not found!");
     });
   }
 
@@ -64,7 +74,7 @@ class Script extends Output {
     const params = {
       query_hash: "3dec7e2c57367ef3da3d987d89f9dbc8", // GraphQL endpoint - WARNING: This key could be changed in the future!
       variables: {
-        id: await this.getCookie("ds_user_id"), // User's ID from browser cookies
+        id: await this.getCookie("ds_user_id"), // User's ID found on browser cookies
         first: "50"
       }
     };
@@ -76,37 +86,40 @@ class Script extends Output {
   async startScript() {
     try {
       do {
-        await this.handleRateLimitOutput(this.requestsCount);
+        await handleOutput("rateLimit", { requestsCount: this.requestsCount });
 
         const url = await this.generateURL();
         const { data } = await fetch(url).then(res => res.json());
 
-        data.user.edge_follow.edges.forEach(edge => {
-          if (checkVerifiedUsers && !edge.node.follows_viewer)
-            this.unfollowers.push({ username: edge.node.username, isVerified: edge.node.is_verified });
-          else if (!checkVerifiedUsers && !edge.node.is_verified && !edge.node.follows_viewer)
-            this.unfollowers.push({ username: edge.node.username });
-        });
+        if (checkVerifiedUsers) {
+          data.user.edge_follow.edges.forEach(edge => {
+            if (!edge.node.follows_viewer)
+              this.unfollowers.push({ username: edge.node.username, isVerified: edge.node.is_verified });
+          });
+        } else {
+          data.user.edge_follow.edges.forEach(edge => {
+            if (!edge.node.is_verified && !edge.node.follows_viewer)
+              this.unfollowers.push({ username: edge.node.username });
+          });
+        }
 
         this.canQuery = data.user.edge_follow.page_info.has_next_page;
         this.nextPageHash = data.user.edge_follow.page_info.end_cursor;
         this.requestsCount++;
 
-        if (!this.followingCount.total) this.followingCount.total = data.user.edge_follow.count;
-        this.followingCount.currentPage += data.user.edge_follow.edges.length;
+        this.followingCount = data.user.edge_follow.count;
+        this.currentPage += data.user.edge_follow.edges.length;
 
-        this.handleProgressOutput(this.followingCount.total, this.followingCount.currentPage);
+        handleOutput("progress", { currentPage: this.currentPage, followingCount: this.followingCount });
         await sleep(2000); // Waiting 2 seconds before requesting the next page
       } while (this.canQuery);
 
-      this.handleProcessFinishOutput(this.unfollowers, this.unfollowers.length);
+      handleOutput("finish", { unfollowers: this.unfollowers });
     } catch (error) {
       return console.error(`Something went wrong!\n${error}`);
     }
   }
-}
-
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+};
 
 const checkVerifiedUsers = confirm("Do you want to check the verified users as well?");
 const script = new Script(checkVerifiedUsers);
