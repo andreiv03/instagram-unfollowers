@@ -18,11 +18,17 @@ const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, millise
 
 ## 🤝 Contributing
 
-Contributions play a vital role in the open-source community, fostering innovation, learning, and collaboration. We welcome and appreciate any contributions that help improve this project.
+Contributions are welcome! If you'd like to enhance the project, follow these steps:
 
-If you have suggestions for enhancements, feel free to fork the repository and submit a pull request. Alternatively, you can open an issue with the `enhancement` tag to share your ideas.
+1. **Fork** the repository
+2. Create a **feature branch** (`git checkout -b feature-branch`)
+3. **Commit** your changes (`git commit -m "feat: add new feature"`)
+4. **Push** your changes (`git push origin feature-branch`)
+5. Open a **Pull Request** 🚀
 
-If you find this project useful, consider starring the repository — your support is greatly appreciated! ⭐
+For suggestions or bug reports, feel free to open an issue with the appropriate label.
+
+⭐ **If you find this project useful, consider giving it a star!** ⭐
 
 ## 📜 License
 
