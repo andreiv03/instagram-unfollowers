@@ -11,9 +11,9 @@ class Script {
 
 	static sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-	static printMessage = (message, type = "log", hasStyles = true) => {
+	static printMessage = (message, type = "log") => {
 		const styles = "padding: 0.5rem 0; font-size: 1rem; font-weight: 700;";
-		console[type](`%c${message}`, hasStyles ? styles : "");
+		console[type](`%c${message}`, styles);
 	};
 
 	async handleOutput(type) {
@@ -52,7 +52,7 @@ class Script {
 			this.unfollowers.forEach(({ username, isVerified }) => {
 				const url = `https://www.instagram.com/${username}/`;
 				const message = `${username}${isVerified ? " ☑️" : ""} - ${url}`;
-				Script.printMessage(message, "log", false);
+				console.log(message);
 			});
 
 			console.groupEnd();
