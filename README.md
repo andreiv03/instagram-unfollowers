@@ -32,4 +32,4 @@ For suggestions or bug reports, feel free to open an issue with the appropriate 
 
 ## 📜 License
 
-Distributed under the **MIT License**. See `LICENSE.txt` for details.
+Distributed under the **MIT License**. See `LICENSE` for details.
